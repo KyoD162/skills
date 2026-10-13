@@ -1,0 +1,20 @@
+{
+  "name": "taste-network-skills",
+  "interface": {
+    "displayName": "Taste Network Skills"
+  },
+  "plugins": [
+    {
+      "name": "taste-second-brain",
+      "source": {
+        "source": "local",
+        "path": "./plugins/taste-second-brain"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

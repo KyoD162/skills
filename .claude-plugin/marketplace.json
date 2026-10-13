@@ -1,0 +1,14 @@
+{
+  "name": "taste-network-skills",
+  "description": "Taste Network agent skills for Claude and Codex/ChatGPT.",
+  "owner": {
+    "name": "KyoD162"
+  },
+  "plugins": [
+    {
+      "name": "taste-second-brain",
+      "source": "./plugins/taste-second-brain",
+      "description": "Use the Taste Network second brain MCP server: progressive, tier-respecting retrieval and conservative writes."
+    }
+  ]
+}

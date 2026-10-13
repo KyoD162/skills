@@ -5,10 +5,17 @@ hub: it holds skills only — no servers, no credentials, no MCP tokens.
 
 ## Contents
 
-- `taste-second-brain/SKILL.md` — how to use the Taste Network "second brain"
-  MCP server: progressive, tier-respecting retrieval and conservative writes.
-- `taste-second-brain/references/tools.md` — exact tool schemas and response
-  shapes.
+```text
+.claude-plugin/marketplace.json              # Claude plugin marketplace
+.agents/plugins/marketplace.json             # Codex / ChatGPT marketplace catalog
+plugins/taste-second-brain/
+  .claude-plugin/plugin.json                 # Claude plugin manifest
+  .codex-plugin/plugin.json                  # Codex plugin manifest
+  skills/taste-second-brain/
+    SKILL.md                                 # the skill
+    references/tools.md                      # exact tool schemas
+README.md
+```
 
 The skill is an instruction layer. It is **not** authentication, a permission
 system, or a substitute for server-side authorization. Access to the brain comes
@@ -16,24 +23,51 @@ from the MCP connection and the bearer token, both configured separately.
 
 ## Canonical source
 
-The canonical copy of `taste-second-brain/` lives in the server repository
+The canonical copy of the skill lives in the server repository
 (`second-brain-mcp-server/skills/`) so it changes together with the tools it
-documents. This hub mirrors it. Do not edit skills here independently — update
-the server repo, then re-publish here.
+documents. This hub mirrors it. Do not edit the skill here independently —
+update the server repo, then re-publish this `skills/taste-second-brain/` tree
+to `plugins/taste-second-brain/skills/taste-second-brain/`.
 
-## Import per platform
+## Install per platform
 
-- **Claude** (claude.ai, desktop, Cowork) — Customize → Skills → add/upload the
-  skill. Uses only the Agent Skills spec frontmatter (`name`, `description`).
-- **Claude Code** — place at `.claude/skills/taste-second-brain/SKILL.md`, or
-  install as a plugin.
-- **ChatGPT** — Plugins → Skills → Create → *Upload from your computer* (or a
-  workspace admin uploads it). Personal Skills require a qualifying
-  Business/Enterprise/Healthcare/Edu workspace.
-- **Manus** — Skills tab → *+ Add* → **Import from GitHub** (this repo) or
-  *Upload a skill* (`.zip` / `.skill` / folder). Invoke with `/`.
-- **opencode** — `.opencode/skills/<name>/SKILL.md`, or point `skills.paths` in
-  `opencode.json` at a checkout of this repo.
+### Claude (marketplace, auto-updating)
+
+Claude Code / Claude Desktop:
+
+```text
+/plugin marketplace add KyoD162/skills
+/plugin install taste-second-brain@taste-network-skills
+```
+
+claude.ai / Cowork: Customize → Plugins → add the marketplace `KyoD162/skills`,
+then install `taste-second-brain`. The skill uses only the Agent Skills spec
+frontmatter (`name`, `description`).
+
+### Codex / ChatGPT (workspace marketplace, daily sync)
+
+A workspace admin imports this repository as a plugin marketplace (catalog at
+`.agents/plugins/marketplace.json`) and keeps it up to date with daily sync.
+The admin can set the installation policy so `taste-second-brain` installs for
+the workspace. Skills require a qualifying Business/Enterprise/Healthcare/Edu
+workspace.
+
+Without a workspace, the skill can also be uploaded directly:
+Plugins → Skills → *Create → Upload from your computer* (the
+`plugins/taste-second-brain/skills/` folder).
+
+### Manus
+
+Skills tab → *+ Add* → **Import from GitHub** (repo `KyoD162/skills`) or
+*Upload a skill* (`.zip` / `.skill` / folder). Invoke with `/`.
+*(Assumption: Manus scans the repository for `SKILL.md`; exact layout not
+documented.)*
+
+### opencode
+
+Point `skills.paths` at a checkout, or copy
+`plugins/taste-second-brain/skills/taste-second-brain/` into
+`.opencode/skills/taste-second-brain/`.
 
 ## Security boundary
 

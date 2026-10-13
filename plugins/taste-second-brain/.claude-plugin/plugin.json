@@ -1,0 +1,8 @@
+{
+  "name": "taste-second-brain",
+  "version": "0.1.0",
+  "description": "Use the Taste Network second brain MCP server: progressive, tier-respecting retrieval and conservative, provenance-preserving writes.",
+  "author": {
+    "name": "KyoD162"
+  }
+}
