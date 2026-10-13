@@ -63,6 +63,11 @@ Skills tab → *+ Add* → **Import from GitHub** (repo `KyoD162/skills`) or
 *(Assumption: Manus scans the repository for `SKILL.md`; exact layout not
 documented.)*
 
+### Grok (xAI)
+
+*Not verified.* Grok is configured only as an MCP window (`grokbot-2` /
+`SB_TOKEN_GROKBOT_2`); no skill-loader or import path is documented.
+
 ### opencode
 
 Point `skills.paths` at a checkout, or copy

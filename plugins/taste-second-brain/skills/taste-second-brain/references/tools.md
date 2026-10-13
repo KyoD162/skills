@@ -38,7 +38,7 @@ Success:
       "visibility": "unknown",
       "client_id": null,
       "classification": {"status": "legacy", "confidence": "low", "human_review_required": true},
-      "snippet": "... <=240 chars, full bodies are never returned ...",
+      "snippet": "... bounded excerpt; full bodies are never returned ...",
       "modified": 1728000000
     }
   ],
@@ -47,7 +47,9 @@ Success:
 ```
 
 `modified` is present only for items sourced from `include_recent`. Items are
-deduplicated by `path`.
+deduplicated by `path`. `snippet` is a bounded excerpt: body-derived snippets
+are capped at 240 characters, while search-sourced snippets come from the FTS
+highlighter and may vary in length. Full bodies are never returned here.
 
 Denied (client scoping not supported):
 
@@ -154,7 +156,7 @@ tier-0 gate; `{"status": "error", "message": "..."}` for a git failure.
 Creates a new note under `vault/00-Inbox/`.
 
 ```json
-{"status": "saved", "path": "00-Inbox/2026-10-13-my-title.md"}
+{"status": "saved", "path": "00-Inbox/2026-10-13 my-title.md"}
 ```
 
 ### `edit_note`
@@ -195,7 +197,7 @@ Without `confirm` it returns `denied` and deletes nothing.
 | --- | --- |
 | `found` | Read succeeded. |
 | `not_found` | Missing **or** unauthorized; the two are indistinguishable by design. |
-| `denied` | Scope, tier-0 gate, or unsupported `client_scope`. |
+| `denied` | Scope, tier-0 gate (may include a `reason`), or unsupported `client_scope`. |
 | `saved` | Write committed (or content unchanged for `edit_note`). |
 | `deleted` | Deletion committed. |
 | `error` | Server/git failure; `message` may be present. |
