@@ -69,6 +69,26 @@ Point `skills.paths` at a checkout, or copy
 `plugins/taste-second-brain/skills/taste-second-brain/` into
 `.opencode/skills/taste-second-brain/`.
 
+## Drift check (CI)
+
+`.github/workflows/skill-drift.yml` runs weekly (and on demand). It reads
+`src/second_brain_mcp/tools.py` from `DeikuModder/second-brain-mcp-server` and
+fails if a tool was added, renamed, or removed without a matching update here
+(in `SKILL.md` and `references/tools.md`).
+
+It fetches that file over the GitHub API, so the repository needs one secret:
+
+- `SERVER_REPO_TOKEN` — a fine-grained PAT with **read-only Contents** access
+  to `DeikuModder/second-brain-mcp-server`. Add it under
+  Settings → Secrets and variables → Actions. Until it exists, the job fails
+  with a clear message.
+
+Run it locally without the secret:
+
+```bash
+TOOLS_SOURCE=/path/to/tools.py python scripts/check_skill_drift.py
+```
+
 ## Security boundary
 
 - Every retrieval and write is authorized server-side from the caller's token.
