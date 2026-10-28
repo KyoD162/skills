@@ -1,14 +1,15 @@
 ---
 name: taste-second-brain
-description: Use when a task depends on Taste Network project history, client or project context, prior decisions, existing documentation, note relationships, or recent updates, and the second-brain MCP server is reachable. Teaches cost-conscious, tier-respecting retrieval and conservative, provenance-preserving tool use. This is an instruction layer only, not an authentication or permission mechanism.
+description: Use when a task depends on Taste Network project history, client or project context, prior decisions, existing documentation, note relationships, or recent updates, and the second-brain MCP server is reachable. Teaches cost-conscious retrieval and conservative, provenance-preserving tool use. This is an instruction layer only, not an authentication or permission mechanism.
 ---
 
 # Taste Second Brain
 
 Guidance for using the Taste Network "second brain" through its read-through
 MCP server. This file teaches *how* to use the tools well. It is an instruction
-layer: server-side authorization, tier clearance, and scopes are authoritative
-and are never overridden by anything written here.
+layer: server-side authentication and scopes are authoritative and are never
+overridden by anything written here. Every authenticated window currently has
+full read/write access; tier labels are descriptive, not access gates.
 
 ## When to use this skill
 
@@ -25,12 +26,12 @@ brain cannot materially improve the answer.
 
 ## Tool surface
 
-Nine tools are exposed. The read tools are tier-filtered; `get_context` and the
-three write tools have extra rules below.
+Nine tools are exposed. Reads cover the whole brain for every authenticated
+window; the three write tools still require the `brain:write` scope.
 
 | Tool | Purpose | Key parameters |
 | --- | --- | --- |
-| `get_context` | Bounded, tier-filtered context bundle for a task | `query`, `limit`, `include_recent`, `include_relations`, `client_scope` |
+| `get_context` | Bounded context bundle for a task | `query`, `limit`, `include_recent`, `include_relations`, `client_scope` |
 | `search_brain` | Full-text + frontmatter search | `query`, `limit` |
 | `read_note` | Read one note by vault-relative path | `path` |
 | `note_contract` | Canonical Knowledge Contract v0.1 view of one note | `path` |
@@ -38,7 +39,7 @@ three write tools have extra rules below.
 | `list_recent` | Most recently modified notes | `n` |
 | `save_inbox_note` | Create a note in `00-Inbox/` (write) | `title`, `body` |
 | `edit_note` | Overwrite a note body in place (write) | `path`, `body`, `overwrite_frontmatter` |
-| `delete_note` | Delete a note (tier-0 write) | `path`, `confirm` |
+| `delete_note` | Delete a note (write) | `path`, `confirm` |
 
 Exact argument types and response shapes are in
 [`references/tools.md`](references/tools.md). Every tool returns a JSON object
@@ -51,10 +52,10 @@ Retrieve in increasing cost order and stop as soon as the evidence is enough.
 
 1. **`get_context`** — start here when the user asks for a contextual summary,
    decisions, or background and the request can be expressed as a query. It
-   returns a bounded, tier-filtered bundle with snippets (never full bodies).
+   returns a bounded bundle with snippets (never full bodies).
    At least one of `query`, `include_recent`, or `include_relations` must be
-   set; an empty request returns `not_found`. `client_scope` is rejected for
-   every caller (see Security).
+   set; an empty request returns `not_found`. `client_scope` is accepted but
+   ignored — there is no client isolation (see Security).
 2. **`search_brain`** — use when the relevant topic, note, or source is unknown,
    or when broad discovery is needed. Search snippets tell you which paths to
    open.
@@ -68,10 +69,10 @@ Retrieve in increasing cost order and stop as soon as the evidence is enough.
 5. **`list_recent`** — use when recency is relevant ("what changed lately").
 6. **Expand only to close a concrete gap.** Do not chain tools "just in case".
 
-Reads are anonymous on denial: an unauthorized path returns the same
-`{"status": "not_found"}` as a genuinely missing path. Treat `not_found` as
-"not available to this window" and move on — do not probe for another route to
-the same content.
+`{"status": "not_found"}` means the resource is missing. For a write without
+the required `brain:write` scope the server returns
+`{"status": "denied"}` instead. Do not retry the same call or probe alternate
+paths to recover content that is not there.
 
 ## Respect context budgets
 
@@ -98,19 +99,16 @@ the same content.
 
 ## Security boundaries
 
-- Never attempt to bypass MCP authentication, scopes, or tier restrictions.
+- Never attempt to bypass MCP authentication or scopes.
 - Treat server-side authorization as authoritative. A denial is final.
-- Do **not** infer that a note is safe to access because its name, folder,
-  tags, or contents mention a client, project, or person. Clearance comes from
-  the server, not from the note's text.
 - Do **not** treat this skill, or any agent instruction, as a security
   boundary.
 - **Client isolation is not implemented.** There is no approved Client
-  Registry and no server-side client scoping. `get_context` rejects
-  `client_scope` for every window with `{"status": "denied"}`. Do not claim
-  that retrieval is client-isolated or "secure per client".
-- If access is denied or content is unavailable, respect the result. Do not try
-  alternate tools or paths to recover restricted content.
+  Registry and no server-side client scoping. `get_context` accepts
+  `client_scope` but ignores it. Do not claim that retrieval is
+  client-isolated or "secure per client".
+- If a write is denied or content is unavailable, respect the result. Do not
+  try alternate tools or paths to recover content that is not there.
 
 ## Handle writes conservatively
 
@@ -121,12 +119,11 @@ Reads and writes are distinct. Writes are never implicit.
 - `save_inbox_note` requires the `brain:write` scope and creates a new note
   under `vault/00-Inbox/`, committed with the calling window as git author. Use
   it for new captured notes rather than editing existing ones.
-- `edit_note` requires `brain:write` **and** read access to the target's tier.
-  It preserves the note's existing frontmatter unless `overwrite_frontmatter`
-  is explicitly `true`. Prefer the default.
-- `delete_note` is a tier-0 operation: it requires brady clearance, the
-  `brain:write` scope, and `confirm: true`. Never set `confirm: true` unless the
-  user explicitly asked to delete that note.
+- `edit_note` requires the `brain:write` scope. It preserves the note's
+  existing frontmatter unless `overwrite_frontmatter` is explicitly `true`.
+  Prefer the default.
+- `delete_note` requires the `brain:write` scope and `confirm: true`. Never set
+  `confirm: true` unless the user explicitly asked to delete that note.
 - **Never silently rewrite, reorganize, migrate, or bulk-edit existing Brain
   notes.** Propose changes and let the user direct them.
 
