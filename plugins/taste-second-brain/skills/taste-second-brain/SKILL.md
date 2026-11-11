@@ -26,25 +26,42 @@ brain cannot materially improve the answer.
 
 ## Tool surface
 
-Nine tools are exposed. Reads cover the whole brain for every authenticated
-window; the three write tools still require the `brain:write` scope.
+Fifteen tools are exposed. Reads cover the whole brain for every authenticated
+window; the seven write tools still require the `brain:write` scope and are also
+subject to the server's versioned write policy (v2.0.0).
 
 | Tool | Purpose | Key parameters |
 | --- | --- | --- |
 | `get_context` | Bounded context bundle for a task | `query`, `limit`, `include_recent`, `include_relations`, `client_scope` |
-| `search_brain` | Full-text + frontmatter search | `query`, `limit` |
+| `search_brain` | Full-text + frontmatter search | `query`, `limit`, `tags`, `path_prefix` |
 | `read_note` | Read one note by vault-relative path | `path` |
 | `note_contract` | Canonical Knowledge Contract v0.1 view of one note | `path` |
 | `query_graph` | Nodes, edges, neighbors around an entity | `entity` |
 | `list_recent` | Most recently modified notes | `n` |
+| `list_folders` | Folders that hold at least one note | — |
+| `vault_manifest` | Complete, cursor-paged file inventory with sha256 | `path_prefix`, `cursor`, `limit`, `include_sha256` |
 | `save_inbox_note` | Create a note in `00-Inbox/` (write) | `title`, `body` |
-| `edit_note` | Overwrite a note body in place (write) | `path`, `body`, `overwrite_frontmatter` |
-| `delete_note` | Delete a note (write) | `path`, `confirm` |
+| `save_document` | File a converted document (write) | `title`, `body`, `source`, `folder`, `category`, `source_sha256` |
+| `save_attachment` | Store one image attachment (write) | `filename`, `content_b64`, `source` |
+| `edit_note` | Overwrite a note body in place (write) | `path`, `body`, `overwrite_frontmatter`, `expected_revision` |
+| `move_note` | Relocate a note, revision-checked and receipted (write) | `source`, `destination`, `expected_revision`, `batch_id`, `policy_version`, `dry_run` |
+| `patch_note` | Apply literal find/replace edits without rewriting the rest (write) | `path`, `replacements`, `expected_revision`, `policy_version`, `batch_id`, `dry_run` |
+| `delete_note` | Delete a note (currently disabled) | `path`, `confirm` |
 
 Exact argument types and response shapes are in
 [`references/tools.md`](references/tools.md). Every tool returns a JSON object
-with a `status` field (`found`, `not_found`, `denied`, `saved`, `deleted`, or
-`error`). Branch on `status`; never assume success.
+with a `status` field (`found`, `not_found`, `denied`, `saved`, `moved`,
+`already_moved`, `planned`, `already_applied`, `no_match`, `destination_exists`,
+`revision_mismatch`, `conflict`, `deleted`, or `error`). Branch on `status`;
+never assume success.
+
+Two policy boundaries matter when reading:
+
+- **Graph exclusion.** `13-Health-Macros` and `04-Project-Atlas/Health-Macros`
+  never appear in `query_graph` or graph-derived context. They remain readable
+  through `read_note` and searchable through `search_brain`.
+- **Restricted destination.** `03-Contracts-Drop` holds signed agreements and
+  is writable only by the `brady` window. Every other window gets `denied`.
 
 ## Progressive retrieval
 
@@ -110,6 +127,25 @@ paths to recover content that is not there.
 - If a write is denied or content is unavailable, respect the result. Do not
   try alternate tools or paths to recover content that is not there.
 
+## Organization and enforcement contract
+
+Use the workflow **search, classify, check for an existing note, capture,
+validate, file, update references, and confirm**. `00-Inbox` is temporary
+staging for uncertain or newly captured material; it is not an automatic
+permanent filing destination. File only after the category and destination are
+known. Use the existing vault taxonomy rather than inventing new roots:
+`02-Operations` for operations, `02-Sales-Systems` for sales, `Projects` for
+projects, `People`/`03-Hiring-and-Team` for people, `08-Bradys-Principles` for
+principles, `06-Content-and-AI`/`09-Newsletters` for content, `Reference` for
+research, and `Templates` for templates. The two `02-` and two `12-` folders
+are distinct.
+
+The MCP server is the enforcement authority. New writes must use the server's
+versioned policy, allowed destination roots, required metadata, provenance,
+and conflict rules. A Skill instruction never grants permission. Ambiguous
+classification or protected destinations require review; do not retry around a
+denial.
+
 ## Handle writes conservatively
 
 Reads and writes are distinct. Writes are never implicit.
@@ -122,10 +158,12 @@ Reads and writes are distinct. Writes are never implicit.
 - `edit_note` requires the `brain:write` scope. It preserves the note's
   existing frontmatter unless `overwrite_frontmatter` is explicitly `true`.
   Prefer the default.
-- `delete_note` requires the `brain:write` scope and `confirm: true`. Never set
-  `confirm: true` unless the user explicitly asked to delete that note.
+- `delete_note` is disabled until an independent approval service exists.
+  `confirm: true` is not sufficient authorization and never enables deletion.
 - **Never silently rewrite, reorganize, migrate, or bulk-edit existing Brain
   notes.** Propose changes and let the user direct them.
+- When using the new write contract, pass the server policy version and
+  category. A policy-version mismatch is a hard error.
 
 ## Limitations
 
