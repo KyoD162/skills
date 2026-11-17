@@ -42,7 +42,7 @@ subject to the server's versioned write policy (v2.0.0).
 | `vault_manifest` | Complete, cursor-paged file inventory with sha256 | `path_prefix`, `cursor`, `limit`, `include_sha256` |
 | `classify_note` | Preview the governed destination for a note | `title`, `body`, `tags` |
 | `ingest_note` | Classify and save a note to its governed home (write) | `title`, `body`, `source`, `tags`, `destination_hint`, `project_name`, `source_sha256`, `converter`, `policy_version` |
-| `save_inbox_note` | Create a note in `00-Inbox/` (write) | `title`, `body` |
+| `save_inbox_note` | Explicit Inbox-only compatibility lane (write) | `title`, `body` |
 | `save_document` | File a converted document (write) | `title`, `body`, `source`, `folder`, `category`, `source_sha256` |
 | `save_attachment` | Store one image attachment (write) | `filename`, `content_b64`, `source` |
 | `edit_note` | Overwrite a note body in place (write) | `path`, `body`, `overwrite_frontmatter`, `expected_revision` |
@@ -133,11 +133,14 @@ paths to recover content that is not there.
 ## Organization and enforcement contract
 
 Use the workflow **search, classify, check for an existing note, capture,
-validate, file, update references, and confirm**. For a new note, call
-`classify_note` when you need to preview routing, then use `ingest_note` as the
-normal write path. The server applies the classifier and sends ambiguous or
-conflicting material to `00-Inbox/Needs-Home`; `destination_hint` is advisory
-and cannot override it. `project_name` may create a folder only under
+validate, file, update references, and confirm**. For every new note with a
+known or reasonably inferable category, call `classify_note` when you need to
+preview routing, then use `ingest_note` as the mandatory write path. Do not
+use `save_inbox_note` as a general fallback: use it only when the caller
+explicitly requests Inbox staging or when classification is genuinely
+impossible and the note must wait for human review. The server applies the
+classifier and sends ambiguous or conflicting material to `00-Inbox/Needs-Home`;
+`destination_hint` is advisory and cannot override it. `project_name` may create a folder only under
 `04-Project-Atlas/New-Projects`. `00-Inbox` is temporary staging for uncertain
 or newly captured material; it is not an automatic permanent filing destination.
 File only after the category and destination are known. Use the existing vault taxonomy rather than inventing new roots:
@@ -169,8 +172,10 @@ Reads and writes are distinct. Writes are never implicit.
   explicit and never overwrites unrelated content.
 - `save_inbox_note` requires the `brain:write` scope and creates a new note
   under `vault/00-Inbox/`, committed with the calling window as git author. It
-  is a compatibility fallback for authored notes and marks routing as pending;
-  prefer `ingest_note` for new material.
+  is reserved for explicit Inbox staging or genuinely unclassifiable material;
+  it marks routing as pending and must not be used for ordinary authored notes.
+- `ingest_note` is mandatory for ordinary new material, including authored
+  lessons, research, project updates, people updates, and operational notes.
 - `save_document` is the lower-level converted-document lane for callers that
   already have a governed document payload. Prefer `ingest_note` when the note
   still needs classification.

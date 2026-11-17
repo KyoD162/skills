@@ -264,7 +264,9 @@ never overwrites a note whose source digest does not match.
 | `body` | string |
 | `policy_version` | string | `null` |
 
-Creates a new note under `vault/00-Inbox/`.
+Creates a new note under `vault/00-Inbox/`. This is an explicit Inbox-staging
+lane only; ordinary new material must use `ingest_note`, even when the caller
+already knows the likely destination.
 
 ```json
 {"status": "saved", "path": "00-Inbox/2026-10-13 my-title.md"}
