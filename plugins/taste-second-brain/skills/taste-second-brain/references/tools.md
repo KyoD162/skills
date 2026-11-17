@@ -210,13 +210,51 @@ Every write response carries a **write receipt** (`receiptVersion: 2`):
 **Destination policy.** Every write is checked against the versioned policy.
 A destination under an allowed root is accepted; an unknown root returns
 `error` (`not allowed`), a protected root returns `error` (`protected`), and a
-*restricted* destination (`03-Contracts-Drop`) returns `denied` for any window
-other than the one named in the policy (`brady`).
+*restricted* destination (`03-Contracts-Drop`, `09-Finance`, `10-Personal`, or
+`11-Bradys-Core`) returns `denied` for any window other than the one named in
+the policy (`brady`).
 
 **Graph exclusion.** `13-Health-Macros` and `04-Project-Atlas/Health-Macros`
 never enter `query_graph` or graph-derived context. They stay readable through
 `read_note` and findable through `search_brain`; exclusion is a graph boundary,
 not a read boundary.
+
+### `classify_note`
+
+| Argument | Type | Default |
+| --- | --- | --- |
+| `title` | string | required |
+| `body` | string | required |
+| `tags` | list of strings | `null` |
+
+Returns a routing preview without writing. An ambiguous note returns a
+`null` destination. Use this tool to explain a route before writing; it does
+not reserve a destination or create a note.
+
+### `ingest_note`
+
+| Argument | Type | Default |
+| --- | --- | --- |
+| `title` | string | required |
+| `body` | string | required |
+| `source` | string | `"mcp-ingest"` |
+| `tags` | list of strings | `null` |
+| `destination_hint` | string | `null` |
+| `project_name` | string | `null` |
+| `source_sha256` | string | `null` |
+| `converter` | string | `null` |
+| `policy_version` | string | `null` |
+
+The normal write path for new notes. The server classifies the content and
+writes deterministic notes to their canonical destination; ambiguous notes go
+to `00-Inbox/Needs-Home`. A conflicting `destination_hint` also goes to
+`00-Inbox/Needs-Home`; hints never override classification. `project_name` can
+only create a folder under `04-Project-Atlas/New-Projects`.
+
+The response includes `routing_state`, `classification`, and a persisted
+receipt. It requires `brain:write`, validates `policy_version` when supplied,
+rejects invalid source hashes, refuses unrelated destination collisions, and
+never overwrites a note whose source digest does not match.
 
 ### `save_inbox_note`
 

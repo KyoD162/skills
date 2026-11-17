@@ -26,8 +26,8 @@ brain cannot materially improve the answer.
 
 ## Tool surface
 
-Fifteen tools are exposed. Reads cover the whole brain for every authenticated
-window; the seven write tools still require the `brain:write` scope and are also
+Seventeen tools are exposed. Reads cover the whole brain for every authenticated
+window; the eight write tools still require the `brain:write` scope and are also
 subject to the server's versioned write policy (v2.0.0).
 
 | Tool | Purpose | Key parameters |
@@ -40,6 +40,8 @@ subject to the server's versioned write policy (v2.0.0).
 | `list_recent` | Most recently modified notes | `n` |
 | `list_folders` | Folders that hold at least one note | — |
 | `vault_manifest` | Complete, cursor-paged file inventory with sha256 | `path_prefix`, `cursor`, `limit`, `include_sha256` |
+| `classify_note` | Preview the governed destination for a note | `title`, `body`, `tags` |
+| `ingest_note` | Classify and save a note to its governed home (write) | `title`, `body`, `source`, `tags`, `destination_hint`, `project_name`, `source_sha256`, `converter`, `policy_version` |
 | `save_inbox_note` | Create a note in `00-Inbox/` (write) | `title`, `body` |
 | `save_document` | File a converted document (write) | `title`, `body`, `source`, `folder`, `category`, `source_sha256` |
 | `save_attachment` | Store one image attachment (write) | `filename`, `content_b64`, `source` |
@@ -60,8 +62,9 @@ Two policy boundaries matter when reading:
 - **Graph exclusion.** `13-Health-Macros` and `04-Project-Atlas/Health-Macros`
   never appear in `query_graph` or graph-derived context. They remain readable
   through `read_note` and searchable through `search_brain`.
-- **Restricted destination.** `03-Contracts-Drop` holds signed agreements and
-  is writable only by the `brady` window. Every other window gets `denied`.
+- **Restricted destinations.** `03-Contracts-Drop`, `09-Finance`,
+  `10-Personal`, and `11-Bradys-Core` are writable only by the `brady`
+  window. Every other window gets `denied`.
 
 ## Progressive retrieval
 
@@ -130,15 +133,21 @@ paths to recover content that is not there.
 ## Organization and enforcement contract
 
 Use the workflow **search, classify, check for an existing note, capture,
-validate, file, update references, and confirm**. `00-Inbox` is temporary
-staging for uncertain or newly captured material; it is not an automatic
-permanent filing destination. File only after the category and destination are
-known. Use the existing vault taxonomy rather than inventing new roots:
-`02-Operations` for operations, `02-Sales-Systems` for sales, `Projects` for
-projects, `People`/`03-Hiring-and-Team` for people, `08-Bradys-Principles` for
-principles, `06-Content-and-AI`/`09-Newsletters` for content, `Reference` for
-research, and `Templates` for templates. The two `02-` and two `12-` folders
-are distinct.
+validate, file, update references, and confirm**. For a new note, call
+`classify_note` when you need to preview routing, then use `ingest_note` as the
+normal write path. The server applies the classifier and sends ambiguous or
+conflicting material to `00-Inbox/Needs-Home`; `destination_hint` is advisory
+and cannot override it. `project_name` may create a folder only under
+`04-Project-Atlas/New-Projects`. `00-Inbox` is temporary staging for uncertain
+or newly captured material; it is not an automatic permanent filing destination.
+File only after the category and destination are known. Use the existing vault taxonomy rather than inventing new roots:
+`01-Operator-Bibles` for operations, sales, administration, skills, and
+principles; `02-People` for people; `03-Relationships` for companies,
+follow-ups, agreements, and sales; `04-Project-Atlas` for projects;
+`05-Marketing-and-Brand` for content; `06-Knowledge` for research and
+templates; `07-Meetings` for meetings; `08-Ideas` for ideas; `09-Finance` for
+finance; `10-Personal` for personal material; `11-Bradys-Core` for Brady's
+private operating core; and `90-System` for system notes and attachments.
 
 The MCP server is the enforcement authority. New writes must use the server's
 versioned policy, allowed destination roots, required metadata, provenance,
@@ -152,9 +161,19 @@ Reads and writes are distinct. Writes are never implicit.
 
 - Only write when the user's request and the caller's tool permission both
   authorize it. A missing or unknown tool permission means: do not write.
+- `classify_note` is read-only and previews the classifier result; it does not
+  reserve a destination or create a note.
+- `ingest_note` requires the `brain:write` scope, records routing metadata,
+  writes deterministic classified destinations, and returns a receipt. It is
+  idempotent for the same title and source digest; a destination collision is
+  explicit and never overwrites unrelated content.
 - `save_inbox_note` requires the `brain:write` scope and creates a new note
-  under `vault/00-Inbox/`, committed with the calling window as git author. Use
-  it for new captured notes rather than editing existing ones.
+  under `vault/00-Inbox/`, committed with the calling window as git author. It
+  is a compatibility fallback for authored notes and marks routing as pending;
+  prefer `ingest_note` for new material.
+- `save_document` is the lower-level converted-document lane for callers that
+  already have a governed document payload. Prefer `ingest_note` when the note
+  still needs classification.
 - `edit_note` requires the `brain:write` scope. It preserves the note's
   existing frontmatter unless `overwrite_frontmatter` is explicitly `true`.
   Prefer the default.
